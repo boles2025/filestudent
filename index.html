@@ -27,7 +27,6 @@
     }
     .container-xl{ max-width:1200px; padding-bottom:76px; flex:1 0 auto; }
 
-    /* Header (شعار + عناوين) */
     .admin-header{
       display:flex; align-items:center; justify-content:space-between; gap:16px;
       padding:14px 0 6px;
@@ -40,7 +39,6 @@
     .brand h1{ margin:0; font-size:clamp(18px,2.2vw,26px); font-weight:900; text-shadow:0 8px 26px rgba(0,0,0,.25); }
     .brand small{ color:var(--muted); opacity:.9 }
 
-    /* شاشة التلفزيون/الرقم */
     .cardx{
       background:var(--card); border:1px solid var(--card-border); border-radius:18px;
       box-shadow:0 18px 40px rgba(0,0,0,.25); padding:16px;
@@ -62,7 +60,6 @@
     @keyframes glowPulse{0%,100%{opacity:.55; transform:scale(1.03)}50%{opacity:.85; transform:scale(1.08)}}
     .bump{animation:bump 260ms ease} @keyframes bump{0%{transform:scale(1);opacity:1}30%{transform:scale(1.08);opacity:.92}100%{transform:scale(1);opacity:1}}
 
-    /* زر الحصول على رقم + التذكرة */
     .cta-btn{display:inline-flex; align-items:center; gap:10px; padding:14px 18px; font-size:clamp(16px,2.2vw,22px); font-weight:800;
       border-radius:999px; background:linear-gradient(90deg,#ffee58,#ffd54f); color:#143; border:none; box-shadow:0 10px 28px rgba(0,0,0,.25), inset 0 -4px 0 rgba(0,0,0,.12); cursor:pointer}
     .ticket-card{position:relative; margin:12px auto 0; display:flex; gap:14px; align-items:center; justify-content:center;
@@ -71,14 +68,12 @@
     .qr-holder{width:120px; height:120px; background:#fff; border-radius:12px; display:flex; align-items:center; justify-content:center}
     .ticket-text{font-size:clamp(14px,1.6vw,18px); opacity:.95}
 
-    /* شريط الإعلانات */
     .ticker-wrap{width:100%; background:rgba(0,0,0,.45); border-top:1px solid rgba(255,255,255,.09); border-bottom:1px solid rgba(255,255,255,.09); overflow:hidden; white-space:nowrap}
     .ticker{display:inline-block; padding-block:10px; will-change:transform; animation:ticker 28s linear infinite}
     .ticker:hover{animation-play-state:paused}
     .ticker-item{display:inline-block; margin-inline:26px; font-size:clamp(14px,1.6vw,18px); color:#ffeb3b; text-shadow:0 0 8px rgba(255,235,59,.35)}
     @keyframes ticker{from{transform:translateX(100%)}to{transform:translateX(-100%)}}
 
-    /* Footer المتحرك */
     .footer-ticker{position:fixed;left:0;right:0;bottom:0;background:rgba(0,0,0,.55);border-top:1px solid rgba(255,255,255,.15);backdrop-filter:blur(6px);z-index:50;overflow:hidden;white-space:nowrap}
     .footer-ticker .inner{display:inline-block;padding:10px 0;animation:marquee 22s linear infinite;font-weight:800;color:#eafff8;text-shadow:0 0 10px rgba(25,209,184,.35)}
     .footer-ticker:hover .inner{animation-play-state:paused}
@@ -154,7 +149,7 @@
     const TRACK_BASE = 'https://boles2025.github.io/filestudent/track.html';
 
     let lastNumber   = null;
-    let baseDuration = 28; // تُقرأ من الإعدادات
+    let baseDuration = 28;
 
     function animateNumber(){ displayEl.classList.remove('bump'); void displayEl.offsetWidth; displayEl.classList.add('bump'); }
 
@@ -182,14 +177,13 @@
       renderTicker(items);
     });
 
-    // سرعة الشريط من الإعدادات
     db.ref('settings/tickerBaseDuration').on('value', s => {
       baseDuration = Number(s.val() || 28);
       const txts = [...tickerEl.querySelectorAll('.ticker-item')].map(e=>e.textContent);
       renderTicker(txts);
     });
 
-    // إصدار رقم جديد + QR
+    // إصدار رقم جديد + QR ثم إخفاؤه بعد 6 ثواني
     const issuedRef = db.ref('queue/lastIssuedNumber');
     getBtn.addEventListener('click', async () => {
       try {
@@ -201,9 +195,14 @@
         const trackUrl = TRACK_BASE + '?my=' + encodeURIComponent(newMyNumber);
         document.getElementById('ticketQR').innerHTML = '';
         new QRCode(document.getElementById('ticketQR'), { text: trackUrl, width: 112, height: 112, correctLevel: QRCode.CorrectLevel.M });
+
+        // 🔥 إخفاء البطاقة بعد 6 ثواني
+        setTimeout(()=>{
+          ticketCard.style.display='none';
+        },9000);
+
       } catch(e){ alert('تعذّر إصدار رقمك الآن. حاول مرة أخرى.'); }
     });
   </script>
 </body>
 </html>
-
