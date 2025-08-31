@@ -196,14 +196,15 @@
         document.getElementById('ticketQR').innerHTML = '';
         new QRCode(document.getElementById('ticketQR'), { text: trackUrl, width: 112, height: 112, correctLevel: QRCode.CorrectLevel.M });
 
-        // 🔥 إخفاء البطاقة بعد 6 ثواني
+        // 🔥 إخفاء البطاقة بعد 60 ثواني
         setTimeout(()=>{
           ticketCard.style.display='none';
-        },12000);
+        },60000);
 
       } catch(e){ alert('تعذّر إصدار رقمك الآن. حاول مرة أخرى.'); }
     });
   </script>
 </body>
 </html>
+
 
