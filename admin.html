@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8" />
+  <title>لوحة التحكم ادارة شئون الطلاب كلية الطب البيطري</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <!-- Bootstrap -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+
+  <!-- Firebase v8 -->
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+
+  <style>
+    :root{
+      --bg1:#051a19; --bg2:#0f3f38;
+      --card:rgba(255,255,255,.08);
+      --card-border:rgba(255,255,255,.16);
+      --ink:#ffffff; --muted:#dfeff0;
+      --accent:#19d1b8; --accent-2:#7bd7ff; --warn:#ffea00; --danger:#ff6b6b;
+    }
+    @keyframes bg-shift { 0%{background-position:0% 50%} 50%{background-position:100% 50%} 100%{background-position:0% 50%} }
+    body{
+      margin:0; min-height:100vh; color:var(--ink);
+      font-family:"Tajawal",system-ui,Segoe UI,Roboto,Arial,sans-serif;
+      background: linear-gradient(135deg,var(--bg1),var(--bg2));
+      background-size:200% 200%; animation:bg-shift 22s ease-in-out infinite;
+    }
+    .container-xl{ max-width:1200px; }
+
+    /* Header */
+    .admin-header{
+      display:flex; align-items:center; justify-content:space-between; gap:16px;
+      padding:14px 0 6px;
+    }
+    .brand{
+      display:flex; align-items:center; gap:12px;
+    }
+    .brand img{
+      width:56px; height:56px; border-radius:12px; object-fit:cover;
+      box-shadow:0 10px 26px rgba(0,0,0,.35);
+      border:1px solid rgba(255,255,255,.25);
+      background:#fff;
+    }
+    .brand h1{
+      margin:0; font-size: clamp(18px,2.2vw,26px); font-weight:900; letter-spacing:.2px;
+      text-shadow: 0 8px 26px rgba(0,0,0,.25);
+    }
+    .brand small{ color:var(--muted); opacity:.9 }
+
+    /* Cards */
+    .cardx{
+      background:var(--card);
+      border:1px solid var(--card-border);
+      border-radius:18px;
+      box-shadow:0 18px 40px rgba(0,0,0,.25);
+      padding:16px;
+    }
+    .metric{
+      display:flex; align-items:center; justify-content:center; gap:12px;
+      background: rgba(0,0,0,.35);
+      border:1px solid rgba(255,255,255,.20);
+      border-radius:14px; padding:14px;
+    }
+    .metric .label{ color:#d8f7f1; font-weight:700; }
+    .metric .value{ font-weight:900; font-size: clamp(28px, 4.2vw, 46px); line-height:1; text-shadow:0 4px 16px rgba(0,0,0,.25); }
+    .value.warn{ color:var(--warn); } .value.info{ color:var(--accent-2); }
+
+    /* Tabs */
+    .nav-pills .nav-link{
+      color:#eafff8; font-weight:800; border-radius:12px; border:1px solid rgba(255,255,255,.18);
+      background:rgba(255,255,255,.08);
+    }
+    .nav-pills .nav-link.active{
+      background: linear-gradient(90deg,#22e0c5,#20b1d4);
+      border-color: transparent; color:#06312d;
+      box-shadow:0 10px 28px rgba(0,0,0,.25);
+    }
+
+    .form-control, .form-select{
+      background: rgba(255,255,255,.07);
+      color: var(--ink);
+      border-color: rgba(255,255,255,.25);
+    }
+    .form-control::placeholder{ color: rgba(255,255,255,.65); }
+
+    .btn-accent{
+      color:#06332f; font-weight:900; border:none;
+      background: linear-gradient(0deg, #9af5e7, #6cf1e0);
+      box-shadow: 0 10px 24px rgba(0,0,0,.25);
+    }
+    .btn-outline-light{ border-color:rgba(255,255,255,.6); color:#fff; }
+    .btn-outline-danger{ border-color:rgba(255,0,0,.5); color:#ffb7b7; }
+    .btn-success{ font-weight:800; }
+
+    /* Footer ticker */
+    .footer-ticker{
+      position: fixed; left:0; right:0; bottom:0;
+      background: rgba(0,0,0,.55);
+      border-top: 1px solid rgba(255,255,255,.15);
+      backdrop-filter: blur(6px);
+      z-index: 50; overflow: hidden; white-space: nowrap;
+    }
+    .footer-ticker .inner{
+      display:inline-block; padding:10px 0; animation: marquee 22s linear infinite;
+      font-weight:800; color:#eafff8; text-shadow:0 0 10px rgba(25,209,184,.35);
+    }
+    .footer-ticker:hover .inner{ animation-play-state: paused; }
+    @keyframes marquee { from{ transform: translateX(100%) } to{ transform: translateX(-100%) } }
+
+    .input-group-text{ background:rgba(255,255,255,.08); color:#fff; border-color:rgba(255,255,255,.25); }
+  </style>
+</head>
+<body>
+
+  <div class="container-xl py-3" style="padding-bottom:76px;">
+    <!-- Header -->
+    <div class="admin-header">
+      <div class="brand">
+        <img src="https://tse2.mm.bing.net/th/id/OIP.yBtj4Qi_E9aiWlLY8KLDGwAAAA?r=0&rs=1&pid=ImgDetMain&o=7&rm=3" alt="شعار كلية الطب البيطري">
+        <div>
+          <h1>لوحة التحكم — كلية الطب البيطري</h1>
+          <small>جامعة المنيا — نظام خدمة العملاء</small>
+        </div>
+      </div>
+      <div class="text-end">
+        <span class="badge rounded-pill" style="background:#0fd3bb; color:#08332f; font-weight:900;">ADM</span>
+      </div>
+    </div>
+
+    <!-- Overview metrics -->
+    <div class="cardx mb-3">
+      <div class="row g-3">
+        <div class="col-12 col-md-4">
+          <div class="metric">
+            <div class="label">الرقم الجاري</div>
+            <div id="m_current" class="value warn">0</div>
+          </div>
+        </div>
+        <div class="col-12 col-md-4">
+          <div class="metric">
+            <div class="label">عدد اللي اخذوا ارقام حتي الان </div>
+            <div id="m_issued" class="value">0</div>
+          </div>
+        </div>
+        <div class="col-12 col-md-4">
+          <div class="metric">
+            <div class="label">المنتظرون الآن  </div>
+            <div id="m_waiting" class="value info">0</div>
+          </div>
+        </div>
+      </div>
+      <div class="small mt-2" style="color:#ccebe7" id="lastUpdate">—</div>
+    </div>
+
+    <!-- Tabs -->
+    <ul class="nav nav-pills mb-3" id="pills-tab" role="tablist">
+      <li class="nav-item" role="presentation">
+        <button class="nav-link active" id="tab-queue" data-bs-toggle="pill" data-bs-target="#pane-queue" type="button" role="tab">التحكم في الدور</button>
+      </li>
+      <li class="nav-item" role="presentation">
+        <button class="nav-link" id="tab-ann" data-bs-toggle="pill" data-bs-target="#pane-ann" type="button" role="tab">الإعلانات</button>
+      </li>
+      <li class="nav-item" role="presentation">
+        <button class="nav-link" id="tab-settings" data-bs-toggle="pill" data-bs-target="#pane-settings" type="button" role="tab">الإعدادات</button>
+      </li>
+    </ul>
+
+    <div class="tab-content" id="pills-tabContent">
+      <!-- Queue Control -->
+      <div class="tab-pane fade show active" id="pane-queue" role="tabpanel">
+        <div class="cardx">
+          <div class="d-flex flex-wrap gap-2 justify-content-center mb-3">
+            <button id="btn_prev" class="btn btn-outline-light">السابق −1</button>
+            <button id="btn_next" class="btn btn-accent">التالي +1</button>
+            <button id="btn_reset" class="btn btn-outline-danger">تصفير (الجاري + المُصدر)</button>
+          </div>
+          <div class="row g-2 align-items-center">
+            <div class="col-7">
+              <input id="setInput" type="number" class="form-control" placeholder="أدخل رقمًا معيّنًا للجاري">
+            </div>
+            <div class="col-5 d-grid">
+              <button id="btn_set" class="btn btn-outline-light">تعيين الرقم الجاري</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Announcements -->
+      <div class="tab-pane fade" id="pane-ann" role="tabpanel">
+        <div class="cardx">
+          <div class="row g-3">
+            <div class="col-12">
+              <label class="form-label">إدخال نص الإعلانات (يمكن الفصل بـ | اختياريًا)</label>
+              <textarea id="annText" class="form-control" rows="3" placeholder="مثال: برجاء إحضار البطاقة | مواعيد العمل 9-2"></textarea>
+            </div>
+
+            <div class="col-12 d-flex gap-2">
+              <button id="saveTextBtn" class="btn btn-accent flex-fill">حفظ كنص واحد</button>
+              <button id="parseToListBtn" class="btn btn-outline-light flex-fill">تحويل إلى قائمة</button>
+            </div>
+
+            <div class="col-12">
+              <label class="form-label">قائمة الإعلانات</label>
+              <div id="annList" class="vstack gap-2"></div>
+              <div class="d-flex gap-2 mt-2">
+                <button id="addItemBtn" class="btn btn-outline-light">+ إضافة سطر</button>
+                <button id="saveListBtn" class="btn btn-success ms-auto">حفظ القائمة</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Settings -->
+      <div class="tab-pane fade" id="pane-settings" role="tabpanel">
+        <div class="cardx">
+          <div class="row g-3">
+            <div class="col-12 col-lg-6">
+              <label class="form-label">سرعة شريط الإعلانات في شاشة العرض (بالثواني — أقل = أسرع)</label>
+              <div class="input-group">
+                <span class="input-group-text">المدة</span>
+                <input id="tickerSeconds" type="number" class="form-control" min="8" max="120" step="1" value="28">
+                <span class="input-group-text">ثانية</span>
+                <button id="saveSpeedBtn" class="btn btn-accent">حفظ</button>
+              </div>
+              <div class="form-text text-light mt-1">القيمة تُحفظ في <code>settings/tickerBaseDuration</code> وتطبَّق تلقائيًا على شاشة العرض.</div>
+            </div>
+
+            <div class="col-12 col-lg-6">
+              <label class="form-label">تجربة سريعة للسرعة</label>
+              <div class="border rounded p-2" style="background:rgba(0,0,0,.25);">
+                <div id="demoTicker" style="white-space:nowrap; overflow:hidden;">
+                  <div id="demoInner" style="display:inline-block; padding:6px 0;">
+                    <span class="me-4">— شريط تجريبي —</span>
+                    <span class="me-4">مواعيد العمل 9 ص إلى 2 م</span>
+                    <span class="me-4">يرجى تجهيز الأوراق</span>
+                    <span>شكرًا لتعاونكم</span>
+                  </div>
+                </div>
+              </div>
+              <div class="small mt-1">اضبط القيمة بالأعلى ثم اضغط «حفظ»، وشاشة العرض ستلتقط التغيير.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /container -->
+
+  <!-- Footer ticker -->
+  <div class="footer-ticker">
+    <div class="inner">
+      &nbsp;&nbsp;تصميم مهندس بولس سمير — مدير وحدة تكنولوجيا المعلومات بكلية الطب البيطري جامعة المنيا&nbsp;&nbsp;•&nbsp;&nbsp;
+      تصميم مهندس بولس سمير — مدير وحدة تكنولوجيا المعلومات بكلية الطب البيطري جامعة المنيا&nbsp;&nbsp;•&nbsp;&nbsp;
+      تصميم مهندس بولس سمير — مدير وحدة تكنولوجيا المعلومات بكلية الطب البيطري جامعة المنيا
+    </div>
+  </div>
+
+  <!-- Firebase config: يجب أن يعرّف window.db = firebase.database() -->
+  <script src="js/firebase.js"></script>
+  <!-- Bootstrap JS (للتابات) -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+
+  <script>
+    // مراجع
+    const qRef       = db.ref('queue');
+    const currentRef = qRef.child('currentNumber');
+    const issuedRef  = qRef.child('lastIssuedNumber');
+    const annRef     = db.ref('announcements');
+    const settingsRef= db.ref('settings');
+
+    // عناصر Overview
+    const mCurrent = document.getElementById('m_current');
+    const mIssued  = document.getElementById('m_issued');
+    const mWait    = document.getElementById('m_waiting');
+    const lastUpdateEl = document.getElementById('lastUpdate');
+    let currentVal = 0, issuedVal = 0;
+
+    function renderWaiting(){
+      mWait.textContent = Math.max(0, Number(issuedVal) - Number(currentVal));
+    }
+    currentRef.on('value', s => {
+      currentVal = Number(s.val() || 0);
+      mCurrent.textContent = currentVal;
+      lastUpdateEl.textContent = 'آخر تحديث: ' + new Date().toLocaleString('ar-EG');
+      renderWaiting();
+    });
+    issuedRef.on('value', s => {
+      issuedVal = Number(s.val() || 0);
+      mIssued.textContent = issuedVal;
+      renderWaiting();
+    });
+
+    // Queue Controls
+    document.getElementById('btn_prev').addEventListener('click', async () => {
+      const nextVal = (Number(currentVal) || 0) - 1;
+      await currentRef.set(nextVal < 0 ? 0 : nextVal);
+    });
+    document.getElementById('btn_next').addEventListener('click', async () => {
+      if (Number(currentVal) >= Number(issuedVal)) { alert('لا يوجد منتظرون جدد — لا يمكن تخطّي آخر رقم مُصدر.'); return; }
+      const [c,i] = await Promise.all([currentRef.get(), issuedRef.get()]);
+      const cur=Number(c.val()||0), iss=Number(i.val()||0);
+      if (cur >= iss) return alert('لا يوجد منتظرون جدد الآن.');
+      await currentRef.set(cur+1);
+    });
+    document.getElementById('btn_reset').addEventListener('click', async () => {
+      if (!confirm('تأكيد التصفير؟ سيُصفّر الرقم الجاري وآخر رقم مُصدر.')) return;
+      await qRef.update({ currentNumber: 0, lastIssuedNumber: 0 });
+    });
+    document.getElementById('btn_set').addEventListener('click', async () => {
+      const n = Number(document.getElementById('setInput').value);
+      if (!Number.isFinite(n) || n < 0) return alert('أدخل رقمًا صحيحًا (>= 0)');
+      const iss = Number((await issuedRef.get()).val() || 0);
+      if (n > iss && !confirm('الرقم المُدخل أكبر من آخر مُصدر. متابعة؟')) return;
+      await currentRef.set(n);
+    });
+
+    // Announcements
+    const annText = document.getElementById('annText');
+    const annList = document.getElementById('annList');
+    const addItemBtn = document.getElementById('addItemBtn');
+    const saveTextBtn= document.getElementById('saveTextBtn');
+    const parseBtn   = document.getElementById('parseToListBtn');
+    const saveListBtn= document.getElementById('saveListBtn');
+
+    function escapeHtml(s){ return String(s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
+
+    function renderList(items){
+      annList.innerHTML='';
+      items.forEach((txt,i)=>{
+        const row=document.createElement('div'); row.className='input-group';
+        row.innerHTML = `
+          <span class="input-group-text">${i+1}</span>
+          <input class="form-control ann-item" value="${escapeHtml(txt)}" placeholder="نص الإعلان">
+          <button class="btn btn-outline-danger remove-btn" title="حذف">حذف</button>`;
+        annList.appendChild(row);
+      });
+      updateIndexes();
+    }
+    function updateIndexes(){
+      [...annList.querySelectorAll('.input-group-text')].forEach((el,idx)=>el.textContent=(idx+1));
+    }
+
+    annRef.on('value', s=>{
+      const data=s.val(); let items=[];
+      if (Array.isArray(data)) items=data.filter(Boolean);
+      else if (typeof data==='string'){ annText.value=data; items=data.split('|').map(t=>t.trim()).filter(Boolean); }
+      else if (data && typeof data==='object') items=Object.values(data).filter(Boolean);
+      renderList(items);
+    });
+    addItemBtn.addEventListener('click', ()=>{
+      const row=document.createElement('div'); row.className='input-group';
+      row.innerHTML=`
+        <span class="input-group-text">${annList.children.length+1}</span>
+        <input class="form-control ann-item" placeholder="نص الإعلان">
+        <button class="btn btn-outline-danger remove-btn" title="حذف">حذف</button>`;
+      annList.appendChild(row); updateIndexes();
+    });
+    annList.addEventListener('click', (e)=>{
+      if (e.target.classList.contains('remove-btn')){ e.target.closest('.input-group').remove(); updateIndexes(); }
+    });
+    saveTextBtn.addEventListener('click', async ()=>{
+      await annRef.set((annText.value||'').trim());
+      alert('تم حفظ الإعلانات كنص واحد.');
+    });
+    parseBtn.addEventListener('click', ()=>{
+      const parts=(annText.value||'').split('|').map(s=>s.trim()).filter(Boolean);
+      renderList(parts);
+    });
+    saveListBtn.addEventListener('click', async ()=>{
+      const items=[...annList.querySelectorAll('.ann-item')].map(i=>i.value.trim()).filter(Boolean);
+      await annRef.set(items); alert('تم حفظ الإعلانات كقائمة.');
+    });
+
+    // Settings: ticker speed
+    const tickerSecondsInp = document.getElementById('tickerSeconds');
+    const saveSpeedBtn     = document.getElementById('saveSpeedBtn');
+    const demoTicker       = document.getElementById('demoTicker');
+    const demoInner        = document.getElementById('demoInner');
+
+    // قراءة القيمة الحالية
+    settingsRef.child('tickerBaseDuration').on('value', s=>{
+      const v = Number(s.val() || 28);
+      tickerSecondsInp.value = v;
+      applyDemoSpeed(v);
+    });
+
+    function applyDemoSpeed(sec){
+      // أنيميشن نصية بسيطة بالـ JS لمحاكاة التحرك
+      demoTicker.style.position='relative';
+      demoTicker.style.height='32px';
+      let start=null;
+      const total=sec*1000;
+      function step(ts){
+        if(!start) start=ts;
+        const prog=(ts-start)/total;
+        const w = demoInner.scrollWidth + demoTicker.clientWidth;
+        demoInner.style.transform = `translateX(${(1 - (prog%1))*100}%)`;
+        requestAnimationFrame(step);
+      }
+      requestAnimationFrame(step);
+    }
+
+    saveSpeedBtn.addEventListener('click', async ()=>{
+      const v = Number(tickerSecondsInp.value);
+      if (!Number.isFinite(v) || v < 8 || v > 120) return alert('من فضلك أدخل قيمة بين 8 و 120 ثانية.');
+      await settingsRef.update({ tickerBaseDuration: v });
+      alert('تم حفظ سرعة شريط الإعلانات.');
+    });
+  </script>
+</body>
+</html>
