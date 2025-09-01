@@ -110,6 +110,42 @@
     @keyframes marquee { from{ transform: translateX(100%) } to{ transform: translateX(-100%) } }
 
     .input-group-text{ background:rgba(255,255,255,.08); color:#fff; border-color:rgba(255,255,255,.25); }
+
+    /* Waiting List Styles */
+    .waiting-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: rgba(25, 209, 184, 0.1);
+      border: 1px solid rgba(25, 209, 184, 0.3);
+      border-radius: 12px;
+      padding: 10px 14px;
+      transition: all 0.2s ease;
+    }
+    .waiting-item:hover {
+      background: rgba(25, 209, 184, 0.2);
+      transform: translateY(-2px);
+    }
+    .waiting-number {
+      font-size: 1.4rem;
+      font-weight: bold;
+      color: #19d1b8;
+    }
+    .delete-btn {
+      background: #ff6b6b;
+      color: white;
+      border: none;
+      padding: 6px 12px;
+      border-radius: 8px;
+      font-weight: bold;
+      font-size: 0.9rem;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .delete-btn:hover {
+      background: #ff5252;
+      transform: scale(1.05);
+    }
   </style>
 </head>
 <body>
@@ -163,6 +199,9 @@
         <button class="nav-link" id="tab-ann" data-bs-toggle="pill" data-bs-target="#pane-ann" type="button" role="tab">الإعلانات</button>
       </li>
       <li class="nav-item" role="presentation">
+        <button class="nav-link" id="tab-waiting" data-bs-toggle="pill" data-bs-target="#pane-waiting" type="button" role="tab">المنتظرون</button>
+      </li>
+      <li class="nav-item" role="presentation">
         <button class="nav-link" id="tab-settings" data-bs-toggle="pill" data-bs-target="#pane-settings" type="button" role="tab">الإعدادات</button>
       </li>
     </ul>
@@ -213,6 +252,19 @@
         </div>
       </div>
 
+      <!-- Waiting List -->
+      <div class="tab-pane fade" id="pane-waiting" role="tabpanel">
+        <div class="cardx">
+          <h5 class="mb-3 text-center text-info">الطلاب المنتظرون</h5>
+          <div id="waitingListContainer" class="vstack gap-2">
+            <!-- سيتم ملؤها ديناميكيًا -->
+          </div>
+          <div class="text-center mt-3">
+            <small class="text-muted">يمكنك حذف رقم من قائمة الانتظار بالنقر على "حذف"</small>
+          </div>
+        </div>
+      </div>
+
       <!-- Settings -->
       <div class="tab-pane fade" id="pane-settings" role="tabpanel">
         <div class="cardx">
@@ -225,7 +277,7 @@
                 <span class="input-group-text">ثانية</span>
                 <button id="saveSpeedBtn" class="btn btn-accent">حفظ</button>
               </div>
-              <div class="form-text text-light mt-1">القيمة تُحفظ في <code>settings/tickerBaseDuration</code> وتطبَّق تلقائيًا على شاشة العرض.</div>
+              <div class="form-text text-light mt-1">القيمة تُحفظ في <code>settings/tickerBaseDuration</code> وتطبَّق تلقائيًا على شاشة العرض.</div>
             </div>
 
             <div class="col-12 col-lg-6">
@@ -258,29 +310,34 @@
     </div>
   </div>
 
-  <!-- Firebase config: يجب أن يعرّف window.db = firebase.database() -->
+  <!-- Firebase config -->
   <script src="js/firebase.js"></script>
-  <!-- Bootstrap JS (للتابات) -->
+  <!-- Bootstrap JS -->
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 
   <script>
-    // مراجع
+    // مراجع قاعدة البيانات
     const qRef       = db.ref('queue');
     const currentRef = qRef.child('currentNumber');
     const issuedRef  = qRef.child('lastIssuedNumber');
     const annRef     = db.ref('announcements');
     const settingsRef= db.ref('settings');
 
-    // عناصر Overview
+    // عناصر العرض
     const mCurrent = document.getElementById('m_current');
     const mIssued  = document.getElementById('m_issued');
     const mWait    = document.getElementById('m_waiting');
     const lastUpdateEl = document.getElementById('lastUpdate');
     let currentVal = 0, issuedVal = 0;
 
+    // تحديث عدد المنتظرين
     function renderWaiting(){
-      mWait.textContent = Math.max(0, Number(issuedVal) - Number(currentVal));
+      const waitingCount = Math.max(0, Number(issuedVal) - Number(currentVal));
+      mWait.textContent = waitingCount;
+      renderWaitingList();
     }
+
+    // الاستماع للتغييرات
     currentRef.on('value', s => {
       currentVal = Number(s.val() || 0);
       mCurrent.textContent = currentVal;
@@ -317,93 +374,153 @@
       await currentRef.set(n);
     });
 
-    // Announcements
+    // قائمة المنتظرين
+    const waitingListContainer = document.getElementById('waitingListContainer');
+
+    function renderWaitingList() {
+      waitingListContainer.innerHTML = '';
+      const start = currentVal + 1;
+      const end = issuedVal;
+
+      if (start > end) {
+        const emptyMsg = document.createElement('div');
+        emptyMsg.className = 'text-center text-muted py-3';
+        emptyMsg.textContent = 'لا يوجد طلاب في قائمة الانتظار حاليًا.';
+        waitingListContainer.appendChild(emptyMsg);
+        return;
+      }
+
+      for (let num = start; num <= end; num++) {
+        const item = document.createElement('div');
+        item.className = 'waiting-item';
+        item.innerHTML = `
+          <span class="waiting-number">${num}</span>
+          <button class="delete-btn" data-num="${num}">حذف</button>
+        `;
+        waitingListContainer.appendChild(item);
+      }
+
+      // إضافة أحداث الحذف
+      waitingListContainer.querySelectorAll('.delete-btn').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+          const num = Number(e.target.getAttribute('data-num'));
+          if (!confirm(`هل أنت متأكد من حذف الرقم ${num} من قائمة الانتظار؟`)) return;
+
+          // نقوم بتقليل lastIssuedNumber إذا كان هو الأخير
+          if (num === issuedVal) {
+            await issuedRef.set(num - 1);
+          } else {
+            alert('يمكن حذف الأرقام فقط من الطرف الأخير. يُمكنك تخطيهم بالانتقال للرقم التالي.');
+          }
+        });
+      });
+    }
+
+    // Announcements (كما هو)
     const annText = document.getElementById('annText');
     const annList = document.getElementById('annList');
     const addItemBtn = document.getElementById('addItemBtn');
-    const saveTextBtn= document.getElementById('saveTextBtn');
-    const parseBtn   = document.getElementById('parseToListBtn');
-    const saveListBtn= document.getElementById('saveListBtn');
+    const saveTextBtn = document.getElementById('saveTextBtn');
+    const parseBtn = document.getElementById('parseToListBtn');
+    const saveListBtn = document.getElementById('saveListBtn');
 
-    function escapeHtml(s){ return String(s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
+    function escapeHtml(s) {
+      return String(s).replace(/[&<>"']/g, m => ({
+        '&': '&amp;', '<': '<', '>': '>', '"': '&quot;', "'": '&#39;'
+      })[m]);
+    }
 
-    function renderList(items){
-      annList.innerHTML='';
-      items.forEach((txt,i)=>{
-        const row=document.createElement('div'); row.className='input-group';
+    function renderList(items) {
+      annList.innerHTML = '';
+      items.forEach((txt, i) => {
+        const row = document.createElement('div');
+        row.className = 'input-group';
         row.innerHTML = `
-          <span class="input-group-text">${i+1}</span>
+          <span class="input-group-text">${i + 1}</span>
           <input class="form-control ann-item" value="${escapeHtml(txt)}" placeholder="نص الإعلان">
           <button class="btn btn-outline-danger remove-btn" title="حذف">حذف</button>`;
         annList.appendChild(row);
       });
       updateIndexes();
     }
-    function updateIndexes(){
-      [...annList.querySelectorAll('.input-group-text')].forEach((el,idx)=>el.textContent=(idx+1));
+
+    function updateIndexes() {
+      [...annList.querySelectorAll('.input-group-text')].forEach((el, idx) => el.textContent = (idx + 1));
     }
 
-    annRef.on('value', s=>{
-      const data=s.val(); let items=[];
-      if (Array.isArray(data)) items=data.filter(Boolean);
-      else if (typeof data==='string'){ annText.value=data; items=data.split('|').map(t=>t.trim()).filter(Boolean); }
-      else if (data && typeof data==='object') items=Object.values(data).filter(Boolean);
+    annRef.on('value', s => {
+      const data = s.val();
+      let items = [];
+      if (Array.isArray(data)) items = data.filter(Boolean);
+      else if (typeof data === 'string') {
+        annText.value = data;
+        items = data.split('|').map(t => t.trim()).filter(Boolean);
+      } else if (data && typeof data === 'object') items = Object.values(data).filter(Boolean);
       renderList(items);
     });
-    addItemBtn.addEventListener('click', ()=>{
-      const row=document.createElement('div'); row.className='input-group';
-      row.innerHTML=`
-        <span class="input-group-text">${annList.children.length+1}</span>
+
+    addItemBtn.addEventListener('click', () => {
+      const row = document.createElement('div');
+      row.className = 'input-group';
+      row.innerHTML = `
+        <span class="input-group-text">${annList.children.length + 1}</span>
         <input class="form-control ann-item" placeholder="نص الإعلان">
         <button class="btn btn-outline-danger remove-btn" title="حذف">حذف</button>`;
-      annList.appendChild(row); updateIndexes();
+      annList.appendChild(row);
+      updateIndexes();
     });
-    annList.addEventListener('click', (e)=>{
-      if (e.target.classList.contains('remove-btn')){ e.target.closest('.input-group').remove(); updateIndexes(); }
+
+    annList.addEventListener('click', (e) => {
+      if (e.target.classList.contains('remove-btn')) {
+        e.target.closest('.input-group').remove();
+        updateIndexes();
+      }
     });
-    saveTextBtn.addEventListener('click', async ()=>{
-      await annRef.set((annText.value||'').trim());
+
+    saveTextBtn.addEventListener('click', async () => {
+      await annRef.set((annText.value || '').trim());
       alert('تم حفظ الإعلانات كنص واحد.');
     });
-    parseBtn.addEventListener('click', ()=>{
-      const parts=(annText.value||'').split('|').map(s=>s.trim()).filter(Boolean);
+
+    parseBtn.addEventListener('click', () => {
+      const parts = (annText.value || '').split('|').map(s => s.trim()).filter(Boolean);
       renderList(parts);
     });
-    saveListBtn.addEventListener('click', async ()=>{
-      const items=[...annList.querySelectorAll('.ann-item')].map(i=>i.value.trim()).filter(Boolean);
-      await annRef.set(items); alert('تم حفظ الإعلانات كقائمة.');
+
+    saveListBtn.addEventListener('click', async () => {
+      const items = [...annList.querySelectorAll('.ann-item')].map(i => i.value.trim()).filter(Boolean);
+      await annRef.set(items);
+      alert('تم حفظ الإعلانات كقائمة.');
     });
 
     // Settings: ticker speed
     const tickerSecondsInp = document.getElementById('tickerSeconds');
-    const saveSpeedBtn     = document.getElementById('saveSpeedBtn');
-    const demoTicker       = document.getElementById('demoTicker');
-    const demoInner        = document.getElementById('demoInner');
+    const saveSpeedBtn = document.getElementById('saveSpeedBtn');
+    const demoTicker = document.getElementById('demoTicker');
+    const demoInner = document.getElementById('demoInner');
 
-    // قراءة القيمة الحالية
-    settingsRef.child('tickerBaseDuration').on('value', s=>{
+    settingsRef.child('tickerBaseDuration').on('value', s => {
       const v = Number(s.val() || 28);
       tickerSecondsInp.value = v;
       applyDemoSpeed(v);
     });
 
-    function applyDemoSpeed(sec){
-      // أنيميشن نصية بسيطة بالـ JS لمحاكاة التحرك
-      demoTicker.style.position='relative';
-      demoTicker.style.height='32px';
-      let start=null;
-      const total=sec*1000;
-      function step(ts){
-        if(!start) start=ts;
-        const prog=(ts-start)/total;
+    function applyDemoSpeed(sec) {
+      demoTicker.style.position = 'relative';
+      demoTicker.style.height = '32px';
+      let start = null;
+      const total = sec * 1000;
+      function step(ts) {
+        if (!start) start = ts;
+        const prog = (ts - start) / total;
         const w = demoInner.scrollWidth + demoTicker.clientWidth;
-        demoInner.style.transform = `translateX(${(1 - (prog%1))*100}%)`;
+        demoInner.style.transform = `translateX(${(1 - (prog % 1)) * 100}%)`;
         requestAnimationFrame(step);
       }
       requestAnimationFrame(step);
     }
 
-    saveSpeedBtn.addEventListener('click', async ()=>{
+    saveSpeedBtn.addEventListener('click', async () => {
       const v = Number(tickerSecondsInp.value);
       if (!Number.isFinite(v) || v < 8 || v > 120) return alert('من فضلك أدخل قيمة بين 8 و 120 ثانية.');
       await settingsRef.update({ tickerBaseDuration: v });
