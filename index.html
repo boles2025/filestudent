@@ -18,6 +18,12 @@
       --accent1:#ffeb3b; --accent2:#00e5ff; --accent3:#ff4081;
       --card:rgba(255,255,255,.08); --card-border:rgba(255,255,255,.16);
     }
+    :root[data-theme="light"]{
+      --bg1:#f8f9fa; --bg2:#e9ecef;
+      --ink:#212529; --muted:#495057;
+      --accent1:#ffeb3b; --accent2:#00e5ff; --accent3:#ff4081;
+      --card:rgba(0,0,0,.05); --card-border:rgba(0,0,0,.125);
+    }
     @keyframes bg-shift { 0%{background-position:0% 50%} 50%{background-position:100% 50%} 100%{background-position:0% 50%} }
     body{
       margin:0; min-height:100vh; color:var(--ink);
@@ -38,6 +44,15 @@
     }
     .brand h1{ margin:0; font-size:clamp(18px,2.2vw,26px); font-weight:900; text-shadow:0 8px 26px rgba(0,0,0,.25); }
     .brand small{ color:var(--muted); opacity:.9 }
+
+    .theme-toggle{
+      background:var(--card);
+      color:var(--ink);
+      border:1px solid var(--card-border);
+      border-radius:8px;
+      padding:6px 10px;
+      cursor:pointer;
+    }
 
     .cardx{
       background:var(--card); border:1px solid var(--card-border); border-radius:18px;
@@ -92,6 +107,7 @@
           <small>جامعة المنيا — نظام خدمة العملاء</small>
         </div>
       </div>
+      <button id="themeToggle" class="theme-toggle" aria-label="تبديل المظهر">☀️</button>
     </div>
 
     <!-- شاشة الرقم -->
@@ -139,6 +155,25 @@
   <!-- Firebase config -->
   <script src="js/firebase.js"></script>
   <script>
+    const root = document.documentElement;
+    const themeBtn = document.getElementById('themeToggle');
+    const savedTheme = localStorage.getItem('theme');
+    if (savedTheme === 'light') {
+      root.setAttribute('data-theme', 'light');
+      themeBtn.textContent = '🌙';
+    }
+    themeBtn.addEventListener('click', () => {
+      const isLight = root.getAttribute('data-theme') === 'light';
+      if (isLight) {
+        root.removeAttribute('data-theme');
+        localStorage.removeItem('theme');
+        themeBtn.textContent = '☀️';
+      } else {
+        root.setAttribute('data-theme', 'light');
+        localStorage.setItem('theme', 'light');
+        themeBtn.textContent = '🌙';
+      }
+    });
     const displayEl   = document.getElementById('displayNumber');
     const tickerEl    = document.getElementById('ticker');
     const getBtn      = document.getElementById('getTicketBtn');
